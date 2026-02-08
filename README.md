@@ -1,4 +1,4 @@
-# 시로 뮤직 (Discord Music Bot)
+# 토모 뮤직 (Discord Music Bot)
 
 Discord 음성채널에서 YouTube 음악을 재생하는 봇. Slash command 기반.
 

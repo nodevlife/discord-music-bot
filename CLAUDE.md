@@ -4,7 +4,7 @@ This file provides context for AI coding agents (Claude Code, Codex, etc.) worki
 
 ## Project Overview
 
-**openclaw-discord-music** (시로 뮤직) is a Discord music bot that plays YouTube audio in voice channels via slash commands.
+**openclaw-discord-music** (토모 뮤직) is a Discord music bot that plays YouTube audio in voice channels via slash commands.
 
 ## Tech Stack
 
@@ -98,7 +98,7 @@ Bun auto-loads `.env` — no dotenv package needed.
 ## Discord Bot Settings
 
 - **App ID**: 1470056074190000290
-- **Bot**: 시로 뮤직#8571
+- **Bot**: 토모 뮤직#8571
 - **Intents**: Guilds, GuildVoiceStates
 - **Permissions**: Connect, Speak, Send Messages, Embed Links, Read Message History, Use Slash Commands, Use Voice Activity
 - **Scopes**: bot, applications.commands
