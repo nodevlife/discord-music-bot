@@ -4,8 +4,8 @@ import type { Readable } from 'stream';
 import { queueManager } from './queue';
 import { type Client, TextChannel } from 'discord.js';
 
-const YTDLP_PATH = '/opt/homebrew/bin/yt-dlp';
-const FFMPEG_PATH = '/opt/homebrew/bin/ffmpeg';
+const YTDLP_PATH = process.env.YTDLP_PATH ?? '/opt/homebrew/bin/yt-dlp';
+const FFMPEG_PATH = process.env.FFMPEG_PATH ?? '/opt/homebrew/bin/ffmpeg';
 
 interface ActiveProcess {
   ytdlp: ChildProcess;
