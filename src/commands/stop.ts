@@ -1,6 +1,7 @@
 import { type ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { queueManager } from '../utils/queue';
 import { killActiveProcesses } from '../utils/player';
+import { updatePresence } from '../utils/presence';
 
 export const data = [
   new SlashCommandBuilder()
@@ -21,6 +22,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   killActiveProcesses(interaction.guildId!);
   queue.songs.length = 0;
   queueManager.delete(interaction.guildId!);
+  updatePresence(interaction.client, null, 0);
 
   const embed = new EmbedBuilder()
     .setColor(0xED4245)

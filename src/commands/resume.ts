@@ -1,5 +1,6 @@
 import { type ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { queueManager } from '../utils/queue';
+import { updatePresence } from '../utils/presence';
 
 export const data = [
   new SlashCommandBuilder()
@@ -18,6 +19,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   }
 
   queue.player.unpause();
+  updatePresence(interaction.client, queue.currentSong, queue.songs.length);
 
   const embed = new EmbedBuilder()
     .setColor(0x57F287)

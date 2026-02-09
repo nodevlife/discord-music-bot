@@ -4,6 +4,7 @@ import type { Readable } from 'stream';
 import { queueManager } from './queue';
 import { type Client, TextChannel, EmbedBuilder } from 'discord.js';
 import { createPlayerButtons } from './buttons';
+import { updatePresence } from './presence';
 
 const YTDLP_PATH = process.env.YTDLP_PATH ?? '/opt/homebrew/bin/yt-dlp';
 const FFMPEG_PATH = process.env.FFMPEG_PATH ?? '/opt/homebrew/bin/ffmpeg';
@@ -116,6 +117,7 @@ export async function playSong(guildId: string, client: Client): Promise<void> {
     queue.currentSong = null;
     queue.playing = false;
     killActiveProcesses(guildId);
+    updatePresence(client, null, 0);
     setTimeout(() => {
       const q = queueManager.get(guildId);
       if (q && !q.playing && q.songs.length === 0) {
@@ -137,6 +139,7 @@ export async function playSong(guildId: string, client: Client): Promise<void> {
     });
 
     queue.player.play(resource);
+    updatePresence(client, song, queue.songs.length);
     queue.player.removeAllListeners(AudioPlayerStatus.Idle);
     queue.player.removeAllListeners('error');
 
