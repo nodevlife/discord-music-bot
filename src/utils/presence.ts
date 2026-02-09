@@ -1,5 +1,6 @@
-import { ActivityType, PresenceUpdateStatus, type Client } from 'discord.js';
+import { ActivityType, type Client } from 'discord.js';
 import type { Song } from './queue';
+import { queueManager } from './queue';
 
 const MAX_ACTIVITY_NAME = 128;
 
@@ -8,10 +9,28 @@ function truncate(text: string, max: number): string {
   return text.slice(0, max - 3) + '...';
 }
 
-export function updatePresence(client: Client, track: Song | null, queueLength: number): void {
+/** Find any guild that is currently playing a track (excluding the given guildId). */
+function findActiveTrack(excludeGuildId?: string): { track: Song; queueLength: number } | null {
+  for (const [guildId, queue] of queueManager.entries()) {
+    if (guildId === excludeGuildId) continue;
+    if (queue.currentSong && queue.playing) {
+      return { track: queue.currentSong, queueLength: queue.songs.length };
+    }
+  }
+  return null;
+}
+
+export function updatePresence(client: Client, track: Song | null, queueLength: number, guildId?: string): void {
   if (!track) {
+    // Before resetting to DND, check if another guild is still playing
+    const other = findActiveTrack(guildId);
+    if (other) {
+      updatePresence(client, other.track, other.queueLength);
+      return;
+    }
+
     client.user?.setPresence({
-      status: PresenceUpdateStatus.DoNotDisturb,
+      status: 'dnd',
       activities: [],
     });
     return;
@@ -22,7 +41,7 @@ export function updatePresence(client: Client, track: Song | null, queueLength: 
   const name = truncate(track.title, Math.max(titleMax, 10)) + suffix;
 
   client.user?.setPresence({
-    status: PresenceUpdateStatus.Online,
+    status: 'online',
     activities: [{ name, type: ActivityType.Listening }],
   });
 }
@@ -30,7 +49,7 @@ export function updatePresence(client: Client, track: Song | null, queueLength: 
 export function updatePresencePaused(client: Client): void {
   const current = client.user?.presence.activities[0];
   client.user?.setPresence({
-    status: PresenceUpdateStatus.Idle,
+    status: 'idle',
     activities: current ? [{ name: current.name, type: current.type }] : [],
   });
 }

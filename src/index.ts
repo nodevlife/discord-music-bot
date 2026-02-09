@@ -129,7 +129,7 @@ client.on('interactionCreate', async (interaction) => {
           killActiveProcesses(guildId);
           queue.songs.length = 0;
           queueManager.delete(guildId);
-          updatePresence(client, null, 0);
+          updatePresence(client, null, 0, guildId);
           const disabledRow = createPlayerButtons(false);
           disabledRow.components.forEach(btn => btn.setDisabled(true));
           const embed = EmbedBuilder.from(interaction.message.embeds[0])

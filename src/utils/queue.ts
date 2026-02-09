@@ -40,6 +40,10 @@ class QueueManager {
   has(guildId: string): boolean {
     return this.queues.has(guildId);
   }
+
+  entries(): IterableIterator<[string, GuildQueue]> {
+    return this.queues.entries();
+  }
 }
 
 export const queueManager = new QueueManager();

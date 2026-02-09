@@ -82,19 +82,36 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     } else {
       queue.songs.push(song);
 
-      const embed = new EmbedBuilder()
-        .setColor(0x57F287)
-        .setTitle('➕ 대기열에 추가됨')
-        .setDescription(`[**${song.title}**](${song.url})`)
-        .addFields(
-          { name: '⏱️ 길이', value: song.duration, inline: true },
-          { name: '👤 신청자', value: song.requestedBy, inline: true },
-          { name: '📋 대기 순서', value: `${queue.songs.length}번째`, inline: true },
-        )
-        .setTimestamp();
+      if (!queue.playing) {
+        // Queue exists but nothing playing — start playback
+        const embed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle('🎵 재생 시작')
+          .setDescription(`[**${song.title}**](${song.url})`)
+          .addFields(
+            { name: '⏱️ 길이', value: song.duration, inline: true },
+            { name: '👤 신청자', value: song.requestedBy, inline: true },
+          )
+          .setTimestamp();
 
-      await interaction.editReply({ embeds: [embed] });
-      updatePresence(interaction.client, queue.currentSong, queue.songs.length);
+        await interaction.editReply({ embeds: [embed] });
+        await playSong(interaction.guildId!, interaction.client);
+      } else {
+        // Currently playing — just add to queue
+        const embed = new EmbedBuilder()
+          .setColor(0x57F287)
+          .setTitle('➕ 대기열에 추가됨')
+          .setDescription(`[**${song.title}**](${song.url})`)
+          .addFields(
+            { name: '⏱️ 길이', value: song.duration, inline: true },
+            { name: '👤 신청자', value: song.requestedBy, inline: true },
+            { name: '📋 대기 순서', value: `${queue.songs.length}번째`, inline: true },
+          )
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+        updatePresence(interaction.client, queue.currentSong, queue.songs.length);
+      }
     }
   } catch (error) {
     console.error('재생 오류:', error);
