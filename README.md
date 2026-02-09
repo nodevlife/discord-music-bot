@@ -1,25 +1,20 @@
-# 토모 뮤직 (Discord Music Bot)
+# 토모 뮤직 🎵
 
-Discord 음성채널에서 YouTube 음악을 재생하는 봇. Slash command 기반.
+Discord 음성채널에서 YouTube 음악을 재생하는 봇.
+한국어/영어 슬래시 커맨드 지원, 재생 컨트롤 버튼 포함.
 
-## Prerequisites
+## 필수 조건
 
 - [Bun](https://bun.sh) v1.0+
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp)
-- [ffmpeg](https://ffmpeg.org/) (libopus 지원 필요)
+- [ffmpeg](https://ffmpeg.org/) (libopus 지원)
 - Discord Bot Token ([Developer Portal](https://discord.com/developers/applications))
 
-### macOS (Homebrew)
-
-```bash
-brew install yt-dlp ffmpeg
-```
-
-## Setup
+## 설치
 
 ```bash
 git clone git@github.com:nodevlife/discord-music-bot.git
-cd openclaw-discord-music
+cd discord-music-bot
 bun install
 cp .env.example .env
 ```
@@ -29,53 +24,61 @@ cp .env.example .env
 ```env
 DISCORD_TOKEN=your_bot_token
 DISCORD_CLIENT_ID=your_application_id
+YTDLP_PATH=/path/to/yt-dlp       # 기본값: /opt/homebrew/bin/yt-dlp
+FFMPEG_PATH=/path/to/ffmpeg       # 기본값: /opt/homebrew/bin/ffmpeg
 ```
 
-## Usage
+## 실행
 
 ```bash
-# 실행
-bun start
-
-# 개발 모드 (파일 변경 시 자동 재시작)
-bun dev
+bun start        # 실행
+bun dev          # 개발 모드 (파일 변경 시 자동 재시작)
 ```
 
-## Commands
+## 커맨드
 
-| Command | Description |
-|---------|-------------|
-| `/play <query>` | YouTube URL 또는 검색어로 음악 재생 |
-| `/skip` | 현재 곡 건너뛰기 |
-| `/stop` | 재생 중지 + 큐 초기화 + 채널 퇴장 |
-| `/queue` | 현재 대기열 확인 |
-| `/pause` | 일시정지 |
-| `/resume` | 재개 |
-| `/nowplaying` | 현재 재생 중인 곡 정보 |
+한국어와 영어 커맨드 모두 사용 가능합니다.
 
-## Architecture
+| 한국어 | English | 설명 |
+|--------|---------|------|
+| `/재생 <검색어>` | `/play <query>` | YouTube URL 또는 검색어로 음악 재생 |
+| `/스킵` | `/skip` | 현재 곡 건너뛰기 |
+| `/정지` | `/stop` | 재생 중지 + 대기열 초기화 + 채널 퇴장 |
+| `/대기열` | `/queue` | 현재 대기열 확인 |
+| `/일시정지` | `/pause` | 일시정지 |
+| `/다시재생` | `/resume` | 다시 재생 |
+| `/지금재생` | `/nowplaying` | 현재 재생 중인 곡 정보 |
+
+## 재생 컨트롤 버튼
+
+곡이 재생될 때 메시지에 컨트롤 버튼이 함께 표시됩니다:
+
+- ⏸️ **일시정지** / ▶️ **다시재생** — 토글
+- ⏭️ **스킵** — 다음 곡으로
+- ⏹️ **정지** — 재생 중단 + 퇴장
+
+## 아키텍처
 
 ```
-YouTube → yt-dlp (stream) → ffmpeg (WebM/Opus) → Discord Voice
+YouTube → yt-dlp (opus/webm) → ffmpeg (copy, no re-encode) → OGG/Opus → Discord Voice
 ```
 
-- **yt-dlp**: YouTube에서 오디오 스트림 추출
-- **ffmpeg**: libopus로 WebM/Opus 포맷으로 변환
-- **@discordjs/voice**: Discord 음성채널로 전송
-
-## Tech Stack
+## 기술 스택
 
 - [Bun](https://bun.sh) + TypeScript
 - [discord.js](https://discord.js.org/) v14
 - [@discordjs/voice](https://www.npmjs.com/package/@discordjs/voice)
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) + [ffmpeg](https://ffmpeg.org/)
+- opusscript (pure JS) + libsodium-wrappers (WASM)
 
-## Notes
+## Docker
 
-- yt-dlp, ffmpeg 경로는 `/opt/homebrew/bin/`으로 하드코딩됨 (macOS Homebrew 기준)
-- 다른 환경이면 `src/utils/player.ts`의 `YTDLP_PATH`, `FFMPEG_PATH` 수정 필요
-- Bun이 `.env` 자동 로드하므로 dotenv 불필요
-- AI 에이전트용 콘텍스트는 `CLAUDE.md` 참고
+```bash
+docker build -t tomo-music .
+docker run --env-file .env tomo-music
+```
+
+Dockerfile에 yt-dlp, ffmpeg 포함되어 있어 별도 설치 불필요.
 
 ## License
 

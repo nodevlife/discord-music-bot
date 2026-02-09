@@ -1,38 +1,49 @@
 # CLAUDE.md — AI Agent Context
 
-This file provides context for AI coding agents (Claude Code, Codex, etc.) working on this project.
+AI 코딩 에이전트(Claude Code, Codex 등)를 위한 프로젝트 컨텍스트.
 
-## Project Overview
+## 프로젝트 개요
 
-**openclaw-discord-music** (토모 뮤직) is a Discord music bot that plays YouTube audio in voice channels via slash commands.
+**discord-music-bot** (토모 뮤직) — Discord 음성채널에서 YouTube 오디오를 재생하는 봇.
+한국어/영어 이중 슬래시 커맨드 + 재생 컨트롤 버튼 UI.
 
-## Tech Stack
+## 기술 스택
 
-- **Runtime**: [Bun](https://bun.sh) — runs TypeScript directly, no build step
-- **Language**: TypeScript (strict mode)
-- **Framework**: discord.js v14 + @discordjs/voice
-- **Audio Pipeline**: yt-dlp → ffmpeg (copy) → OGG/Opus → Discord voice
-- **Package Manager**: Bun (`bun install`, `bun.lock`)
+- **런타임**: [Bun](https://bun.sh) — TypeScript 직접 실행, 빌드 단계 없음
+- **언어**: TypeScript (strict mode)
+- **프레임워크**: discord.js v14 + @discordjs/voice
+- **오디오 파이프라인**: yt-dlp → ffmpeg (copy) → OGG/Opus → Discord voice
+- **패키지 매니저**: Bun (`bun install`, `bun.lock`)
+- **네이티브 애드온 없음**: opusscript (pure JS), libsodium-wrappers (WASM)
 
-## Architecture
+## 디렉토리 구조
 
 ```
 src/
-├── index.ts              # Entry point — client setup, command registration, event handlers
-├── commands/             # Slash command handlers (one file per command)
-│   ├── play.ts           # /play <query> — join voice, search/play YouTube audio
-│   ├── skip.ts           # /skip — kill processes, skip to next song
-│   ├── stop.ts           # /stop — kill processes, clear queue, leave channel
-│   ├── pause.ts          # /pause — pause playback
-│   ├── resume.ts         # /resume — resume playback
-│   ├── queue.ts          # /queue — display queue as embed
-│   └── nowplaying.ts     # /nowplaying — show current song as embed
+├── index.ts              # 엔트리포인트 — 클라이언트 설정, 커맨드 등록, 이벤트 핸들러, 버튼 인터랙션 처리
+├── commands/             # 슬래시 커맨드 핸들러 (커맨드당 한 파일)
+│   ├── play.ts           # /재생, /play — 음성 채널 입장, YouTube 오디오 재생
+│   ├── skip.ts           # /스킵, /skip — 프로세스 kill, 다음 곡
+│   ├── stop.ts           # /정지, /stop — 프로세스 kill, 대기열 초기화, 채널 퇴장
+│   ├── pause.ts          # /일시정지, /pause
+│   ├── resume.ts         # /다시재생, /resume
+│   ├── queue.ts          # /대기열, /queue — 대기열 embed 표시
+│   └── nowplaying.ts     # /지금재생, /nowplaying — 현재 곡 embed
 └── utils/
-    ├── player.ts         # Audio pipeline (yt-dlp + ffmpeg), process lifecycle
-    └── queue.ts          # GuildQueue data structure + QueueManager singleton
+    ├── buttons.ts        # 재생 컨트롤 버튼 빌더 (일시정지/스킵/정지)
+    ├── player.ts         # 오디오 파이프라인 (yt-dlp + ffmpeg), 프로세스 라이프사이클
+    └── queue.ts          # GuildQueue 데이터 구조 + QueueManager 싱글톤
 ```
 
-## Audio Pipeline Detail
+## 커맨드 시스템
+
+각 커맨드 파일은 다음을 export:
+- `data`: `SlashCommandBuilder[]` 배열 (한국어 + 영어 커맨드)
+- `execute(interaction)`: async 핸들러
+
+`index.ts`에서 `flatMap`으로 모든 커맨드를 펼쳐 등록. 총 14개 커맨드 (7 한국어 + 7 영어).
+
+## 오디오 파이프라인
 
 ```
 YouTube → yt-dlp (opus/webm, format 251) → stdout
@@ -41,74 +52,73 @@ YouTube → yt-dlp (opus/webm, format 251) → stdout
   → Discord voice channel
 ```
 
-**Key**: ffmpeg does NOT re-encode. It copies the Opus stream from WebM into an OGG container.
-This avoids "Error parsing Opus packet header" and CPU overhead.
+ffmpeg는 리인코딩 없이 Opus 스트림을 WebM에서 OGG 컨테이너로 복사만 함.
 
-## Key Design Decisions
+## 버튼 시스템
 
-### Process Management
-- `activeProcesses` Map tracks yt-dlp + ffmpeg `ChildProcess` per guild ID
-- `killActiveProcesses(guildId)` sends `SIGKILL` to both — called on skip, stop, errors
-- All pipe streams have `.on('error', () => {})` to suppress EPIPE during cleanup
-- ffmpeg stderr is logged with `[ffmpeg]` prefix for debugging
-- yt-dlp stderr is logged with `[yt-dlp]` prefix
+- `src/utils/buttons.ts`에서 `createPlayerButtons(paused)` 함수
+- 곡 재생 시 embed 아래에 3개 버튼 표시: ⏸️ 일시정지, ⏭️ 스킵, ⏹️ 정지
+- `index.ts`에서 `interactionCreate` 이벤트로 버튼 클릭 처리
+- 일시정지/다시재생 토글 시 embed + 버튼 업데이트
+- 다음 곡 재생 시 이전 메시지 버튼 자동 비활성화
+- `GuildQueue.nowPlayingMessage`에 현재 재생 메시지 참조 저장
 
-### Queue System
-- `QueueManager` singleton holds per-guild queues
-- `QueueManager.delete()` stops player + destroys voice connection
-- Auto-leave: 30 seconds after queue empties, bot disconnects
+## 프로세스 관리
 
-### Command Pattern
-Each command file exports:
-- `data`: `SlashCommandBuilder` instance
-- `execute(interaction)`: async handler function
+- `activeProcesses` Map으로 길드별 yt-dlp + ffmpeg ChildProcess 추적
+- `killActiveProcesses(guildId)`로 SIGKILL — skip, stop, 에러 시 호출
+- 모든 pipe 스트림에 `.on('error', () => {})` (EPIPE 억제)
 
-### Event Handling
-- Uses `clientReady` (not `ready`) for discord.js v15 compatibility
-- Slash commands registered globally via REST API on startup
-- `AudioPlayerStatus.Idle` triggers next song playback
-- Listeners are removed before re-attaching to prevent memory leaks
+## 큐 시스템
 
-## Environment Variables
+- `QueueManager` 싱글톤으로 길드별 큐 관리
+- `QueueManager.delete()`로 플레이어 정지 + 음성 연결 해제
+- 대기열 비면 30초 후 자동 퇴장
+
+## 환경변수
 
 ```env
 DISCORD_TOKEN=<bot token>
 DISCORD_CLIENT_ID=<application id>
+YTDLP_PATH=<yt-dlp 경로>      # 기본값: /opt/homebrew/bin/yt-dlp
+FFMPEG_PATH=<ffmpeg 경로>    # 기본값: /opt/homebrew/bin/ffmpeg
 ```
 
-Bun auto-loads `.env` — no dotenv package needed.
+Bun이 `.env` 자동 로드 — dotenv 불필요.
 
-## Scripts
+## Docker 배포
 
-- `bun start` — production run
-- `bun dev` — watch mode (auto-restart on changes)
+- Dockerfile: `oven/bun:1` 기반, ffmpeg + yt-dlp 포함
+- Dokploy로 배포 (nodevlife org, autodeploy ON)
+- Docker 환경 경로: `YTDLP_PATH=/usr/local/bin/yt-dlp`, `FFMPEG_PATH=/usr/bin/ffmpeg`
 
-## External Dependencies (system)
-
-- **yt-dlp**: `/opt/homebrew/bin/yt-dlp` (macOS Homebrew)
-- **ffmpeg**: `/opt/homebrew/bin/ffmpeg` (macOS Homebrew, needs libopus)
-- Paths are hardcoded in `src/utils/player.ts` (`YTDLP_PATH`, `FFMPEG_PATH`)
-- For other environments, update these constants
-
-## Known Issues
-
-- **TimeoutNegativeWarning**: Bun runtime emits this from @discordjs/voice internals. Harmless, cannot be suppressed. Does not affect playback.
-- **EPIPE on skip/stop**: Expected when killing processes mid-stream. Suppressed by error handlers.
-
-## Discord Bot Settings
+## Discord 봇 설정
 
 - **App ID**: 1470056074190000290
 - **Bot**: 토모 뮤직#8571
 - **Intents**: Guilds, GuildVoiceStates
-- **Permissions**: Connect, Speak, Send Messages, Embed Links, Read Message History, Use Slash Commands, Use Voice Activity
-- **Scopes**: bot, applications.commands
+- **권한**: Connect, Speak, Send Messages, Embed Links, Read Message History, Use Slash Commands
 - **Invite**: `https://discord.com/oauth2/authorize?client_id=1470056074190000290`
 
-## Development Guidelines
+## UI/UX 규칙
 
-- No build step — Bun runs `.ts` directly
-- `type` imports preferred (`import type { ... }`)
-- Error replies use `ephemeral: true`
-- Embed messages for queue/nowplaying displays
-- Keep absolute paths for yt-dlp/ffmpeg
-- Don't re-encode Opus — always use `-c:a copy`
+- 모든 유저 메시지는 **한국어**
+- Discord Embed 사용, 색상 테마:
+  - `0x5865F2` (Blurple) — 재생, 대기열, 지금 재생 중
+  - `0x57F287` (Green) — 대기열 추가, 다시 재생
+  - `0xFEE75C` (Yellow) — 스킵, 일시정지
+  - `0xED4245` (Red) — 정지, 오류
+- 에러 응답은 `ephemeral: true`
+
+## 알려진 이슈
+
+- **TimeoutNegativeWarning**: @discordjs/voice 내부 경고. 무해함.
+- **EPIPE on skip/stop**: 미드스트림 kill 시 예상된 동작. 에러 핸들러로 억제.
+
+## 개발 가이드라인
+
+- 빌드 단계 없음 — Bun이 `.ts` 직접 실행
+- `type` import 선호 (`import type { ... }`)
+- 절대 경로로 yt-dlp/ffmpeg 사용 (env 또는 상수)
+- Opus 리인코딩 금지 — 항상 `-c:a copy`
+- 네이티브 애드온 사용 금지 (Docker 호환성)
