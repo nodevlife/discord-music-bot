@@ -37,6 +37,10 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildVoiceStates,
   ],
+  presence: {
+    status: 'dnd',
+    activities: [],
+  },
 });
 
 async function registerCommands(): Promise<void> {
