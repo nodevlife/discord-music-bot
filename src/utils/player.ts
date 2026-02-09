@@ -33,9 +33,11 @@ interface SongInfo {
 export async function getSongInfo(query: string): Promise<SongInfo> {
   return new Promise((resolve, reject) => {
     const isUrl = query.startsWith('http://') || query.startsWith('https://');
-    const args = isUrl
+    const args: string[] = ['--no-cache-dir'];
+    const searchArgs = isUrl
       ? ['--no-playlist', '-j', query]
       : [`ytsearch1:${query}`, '--no-playlist', '-j'];
+    args.push(...searchArgs);
 
     const proc = spawn(YTDLP_PATH, args);
     let stdout = '';
@@ -117,7 +119,7 @@ export async function playSong(guildId: string, client: Client): Promise<void> {
     queue.currentSong = null;
     queue.playing = false;
     killActiveProcesses(guildId);
-    updatePresence(client, null, 0);
+    updatePresence(client, null, 0, guildId);
     setTimeout(() => {
       const q = queueManager.get(guildId);
       if (q && !q.playing && q.songs.length === 0) {

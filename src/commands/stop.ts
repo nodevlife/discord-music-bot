@@ -22,7 +22,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   killActiveProcesses(interaction.guildId!);
   queue.songs.length = 0;
   queueManager.delete(interaction.guildId!);
-  updatePresence(interaction.client, null, 0);
+  updatePresence(interaction.client, null, 0, interaction.guildId!);
 
   const embed = new EmbedBuilder()
     .setColor(0xED4245)
