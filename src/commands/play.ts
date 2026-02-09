@@ -2,6 +2,7 @@ import { type ChatInputCommandInteraction, type GuildMember, SlashCommandBuilder
 import { joinVoiceChannel, createAudioPlayer } from '@discordjs/voice';
 import { queueManager } from '../utils/queue';
 import { getSongInfo, playSong } from '../utils/player';
+import { updatePresence } from '../utils/presence';
 
 export const data = [
   new SlashCommandBuilder()
@@ -93,6 +94,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
+      updatePresence(interaction.client, queue.currentSong, queue.songs.length);
     }
   } catch (error) {
     console.error('재생 오류:', error);

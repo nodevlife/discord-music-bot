@@ -3,6 +3,7 @@ import { AudioPlayerStatus } from '@discordjs/voice';
 import { queueManager } from './utils/queue';
 import { killActiveProcesses } from './utils/player';
 import { ButtonIds, createPlayerButtons } from './utils/buttons';
+import { updatePresence, updatePresencePaused } from './utils/presence';
 
 const { DISCORD_TOKEN, DISCORD_CLIENT_ID } = process.env;
 
@@ -98,8 +99,10 @@ client.on('interactionCreate', async (interaction) => {
           const isPaused = queue.player.state.status === AudioPlayerStatus.Paused;
           if (isPaused) {
             queue.player.unpause();
+            updatePresence(client, queue.currentSong, queue.songs.length);
           } else {
             queue.player.pause();
+            updatePresencePaused(client);
           }
           const nowPaused = !isPaused;
           const row = createPlayerButtons(nowPaused);
@@ -126,6 +129,7 @@ client.on('interactionCreate', async (interaction) => {
           killActiveProcesses(guildId);
           queue.songs.length = 0;
           queueManager.delete(guildId);
+          updatePresence(client, null, 0);
           const disabledRow = createPlayerButtons(false);
           disabledRow.components.forEach(btn => btn.setDisabled(true));
           const embed = EmbedBuilder.from(interaction.message.embeds[0])
