@@ -1,4 +1,8 @@
-import { Client, GatewayIntentBits, REST, Routes, type ChatInputCommandInteraction } from 'discord.js';
+import { Client, GatewayIntentBits, REST, Routes, EmbedBuilder, type ChatInputCommandInteraction } from 'discord.js';
+import { AudioPlayerStatus } from '@discordjs/voice';
+import { queueManager } from './utils/queue';
+import { killActiveProcesses } from './utils/player';
+import { ButtonIds, createPlayerButtons } from './utils/buttons';
 
 const { DISCORD_TOKEN, DISCORD_CLIENT_ID } = process.env;
 
@@ -56,20 +60,82 @@ client.once('clientReady', () => {
 });
 
 client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
+  if (interaction.isChatInputCommand()) {
+    const command = commandMap.get(interaction.commandName);
+    if (!command) return;
 
-  const command = commandMap.get(interaction.commandName);
-  if (!command) return;
+    try {
+      await command.execute(interaction);
+    } catch (error) {
+      console.error(`${interaction.commandName} 실행 오류:`, error);
+      const reply = { content: '❌ 오류가 발생했어요. 다시 시도해 주세요.', ephemeral: true as const };
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp(reply).catch(() => {});
+      } else {
+        await interaction.reply(reply).catch(() => {});
+      }
+    }
+    return;
+  }
 
-  try {
-    await command.execute(interaction);
-  } catch (error) {
-    console.error(`${interaction.commandName} 실행 오류:`, error);
-    const reply = { content: '❌ 오류가 발생했어요. 다시 시도해 주세요.', ephemeral: true as const };
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(reply).catch(() => {});
-    } else {
-      await interaction.reply(reply).catch(() => {});
+  if (interaction.isButton()) {
+    const guildId = interaction.guildId;
+    if (!guildId) return;
+
+    const queue = queueManager.get(guildId);
+    if (!queue || !queue.currentSong) {
+      await interaction.reply({ content: '❌ 재생 중인 곡이 없어요!', ephemeral: true }).catch(() => {});
+      return;
+    }
+
+    try {
+      switch (interaction.customId) {
+        case ButtonIds.PAUSE_RESUME: {
+          const isPaused = queue.player.state.status === AudioPlayerStatus.Paused;
+          if (isPaused) {
+            queue.player.unpause();
+          } else {
+            queue.player.pause();
+          }
+          const nowPaused = !isPaused;
+          const row = createPlayerButtons(nowPaused);
+          const embed = EmbedBuilder.from(interaction.message.embeds[0])
+            .setTitle(nowPaused ? '⏸️ 일시정지' : '🎵 지금 재생 중')
+            .setColor(nowPaused ? 0xFEE75C : 0x5865F2);
+          await interaction.update({ embeds: [embed], components: [row] });
+          break;
+        }
+        case ButtonIds.SKIP: {
+          const skipped = queue.currentSong;
+          killActiveProcesses(guildId);
+          queue.player.stop();
+          const disabledRow = createPlayerButtons(false);
+          disabledRow.components.forEach(btn => btn.setDisabled(true));
+          const embed = EmbedBuilder.from(interaction.message.embeds[0])
+            .setTitle('⏭️ 곡 스킵')
+            .setColor(0xFEE75C)
+            .setFooter({ text: `다음 곡이 ${queue.songs.length > 0 ? '곧 재생됩니다' : '없습니다'}` });
+          await interaction.update({ embeds: [embed], components: [disabledRow] });
+          break;
+        }
+        case ButtonIds.STOP: {
+          killActiveProcesses(guildId);
+          queue.songs.length = 0;
+          queueManager.delete(guildId);
+          const disabledRow = createPlayerButtons(false);
+          disabledRow.components.forEach(btn => btn.setDisabled(true));
+          const embed = EmbedBuilder.from(interaction.message.embeds[0])
+            .setTitle('⏹️ 재생 정지')
+            .setColor(0xED4245)
+            .setDescription('재생을 멈추고 대기열을 모두 비웠어요.')
+            .setFooter({ text: '재생이 정지되었습니다' });
+          await interaction.update({ embeds: [embed], components: [disabledRow] });
+          break;
+        }
+      }
+    } catch (error) {
+      console.error('버튼 상호작용 오류:', error);
+      await interaction.reply({ content: '❌ 오류가 발생했어요.', ephemeral: true }).catch(() => {});
     }
   }
 });

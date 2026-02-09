@@ -61,6 +61,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         connection,
         textChannelId: interaction.channelId,
         playing: false,
+        nowPlayingMessage: null,
       };
       queueManager.set(interaction.guildId!, queue);
       queue.songs.push(song);

@@ -1,4 +1,5 @@
 import type { AudioPlayer, VoiceConnection } from '@discordjs/voice';
+import type { Message } from 'discord.js';
 
 export interface Song {
   title: string;
@@ -14,6 +15,7 @@ export interface GuildQueue {
   connection: VoiceConnection;
   textChannelId: string;
   playing: boolean;
+  nowPlayingMessage: Message | null;
 }
 
 class QueueManager {

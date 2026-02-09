@@ -3,6 +3,7 @@ import { spawn, type ChildProcess } from 'child_process';
 import type { Readable } from 'stream';
 import { queueManager } from './queue';
 import { type Client, TextChannel, EmbedBuilder } from 'discord.js';
+import { createPlayerButtons } from './buttons';
 
 const YTDLP_PATH = process.env.YTDLP_PATH ?? '/opt/homebrew/bin/yt-dlp';
 const FFMPEG_PATH = process.env.FFMPEG_PATH ?? '/opt/homebrew/bin/ffmpeg';
@@ -146,6 +147,14 @@ export async function playSong(guildId: string, client: Client): Promise<void> {
       playSong(guildId, client);
     });
 
+    // Disable buttons on previous now-playing message
+    if (queue.nowPlayingMessage) {
+      const disabledRow = createPlayerButtons(false);
+      disabledRow.components.forEach(btn => btn.setDisabled(true));
+      await queue.nowPlayingMessage.edit({ components: [disabledRow] }).catch(() => {});
+      queue.nowPlayingMessage = null;
+    }
+
     const channel = await client.channels.fetch(queue.textChannelId).catch(() => null);
     if (channel instanceof TextChannel) {
       const embed = new EmbedBuilder()
@@ -159,7 +168,9 @@ export async function playSong(guildId: string, client: Client): Promise<void> {
         .setFooter({ text: `대기열에 ${queue.songs.length}곡 남음` })
         .setTimestamp();
 
-      await channel.send({ embeds: [embed] }).catch(() => {});
+      const row = createPlayerButtons(false);
+      const msg = await channel.send({ embeds: [embed], components: [row] }).catch(() => null);
+      queue.nowPlayingMessage = msg;
     }
   } catch (error) {
     console.error('곡 재생 오류:', error);
