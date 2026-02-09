@@ -1,9 +1,11 @@
 import { ActivityType, PresenceUpdateStatus, type Client } from 'discord.js';
 import type { Song } from './queue';
 
-function truncateTitle(title: string): string {
-  if (title.length <= 128) return title;
-  return title.slice(0, 125) + '...';
+const MAX_ACTIVITY_NAME = 128;
+
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  return text.slice(0, max - 3) + '...';
 }
 
 export function updatePresence(client: Client, track: Song | null, queueLength: number): void {
@@ -15,9 +17,9 @@ export function updatePresence(client: Client, track: Song | null, queueLength: 
     return;
   }
 
-  const name = queueLength > 0
-    ? `${truncateTitle(track.title)} 외 ${queueLength}곡 대기 중`
-    : truncateTitle(track.title);
+  const suffix = queueLength > 0 ? ` 외 ${queueLength}곡 대기 중` : '';
+  const titleMax = MAX_ACTIVITY_NAME - suffix.length;
+  const name = truncate(track.title, Math.max(titleMax, 10)) + suffix;
 
   client.user?.setPresence({
     status: PresenceUpdateStatus.Online,
