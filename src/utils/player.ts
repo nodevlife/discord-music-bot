@@ -2,7 +2,7 @@ import { createAudioResource, AudioPlayerStatus, StreamType } from '@discordjs/v
 import { spawn, type ChildProcess } from 'child_process';
 import type { Readable } from 'stream';
 import { queueManager } from './queue';
-import { type Client, TextChannel } from 'discord.js';
+import { type Client, TextChannel, EmbedBuilder } from 'discord.js';
 
 const YTDLP_PATH = process.env.YTDLP_PATH ?? '/opt/homebrew/bin/yt-dlp';
 const FFMPEG_PATH = process.env.FFMPEG_PATH ?? '/opt/homebrew/bin/ffmpeg';
@@ -54,7 +54,7 @@ export async function getSongInfo(query: string): Promise<SongInfo> {
           duration: `${Math.floor(dur / 60)}:${Math.floor(dur % 60).toString().padStart(2, '0')}`,
         });
       } catch {
-        reject(new Error('Failed to parse yt-dlp output'));
+        reject(new Error('yt-dlp 출력을 파싱할 수 없습니다'));
       }
     });
   });
@@ -141,17 +141,28 @@ export async function playSong(guildId: string, client: Client): Promise<void> {
 
     queue.player.on(AudioPlayerStatus.Idle, () => playSong(guildId, client));
     queue.player.on('error', (error) => {
-      console.error(`Player error: ${error.message}`);
+      console.error(`플레이어 오류: ${error.message}`);
       killActiveProcesses(guildId);
       playSong(guildId, client);
     });
 
     const channel = await client.channels.fetch(queue.textChannelId).catch(() => null);
     if (channel instanceof TextChannel) {
-      await channel.send(`🎵 Now playing: **${song.title}** [${song.duration}]`).catch(() => {});
+      const embed = new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setTitle('🎵 지금 재생 중')
+        .setDescription(`[**${song.title}**](${song.url})`)
+        .addFields(
+          { name: '⏱️ 길이', value: song.duration, inline: true },
+          { name: '👤 신청자', value: song.requestedBy, inline: true },
+        )
+        .setFooter({ text: `대기열에 ${queue.songs.length}곡 남음` })
+        .setTimestamp();
+
+      await channel.send({ embeds: [embed] }).catch(() => {});
     }
   } catch (error) {
-    console.error('Error playing song:', error);
+    console.error('곡 재생 오류:', error);
     killActiveProcesses(guildId);
     playSong(guildId, client);
   }
