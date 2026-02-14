@@ -6,6 +6,7 @@ export interface Song {
 	url: string;
 	duration: string;
 	requestedBy: string;
+	thumbnail: string | null;
 }
 
 export interface GuildQueue {

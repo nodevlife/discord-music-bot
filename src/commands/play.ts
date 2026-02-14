@@ -58,6 +58,7 @@ export async function execute(
 			url: songInfo.url,
 			duration: songInfo.duration,
 			requestedBy: interaction.user.tag,
+			thumbnail: songInfo.thumbnail,
 		};
 
 		let queue = queueManager.get(guildId);
@@ -93,6 +94,10 @@ export async function execute(
 				)
 				.setTimestamp();
 
+			if (song.thumbnail) {
+				embed.setThumbnail(song.thumbnail);
+			}
+
 			await interaction.editReply({ embeds: [embed] });
 			await playSong(guildId, interaction.client);
 		} else {
@@ -109,6 +114,10 @@ export async function execute(
 						{ name: "👤 신청자", value: song.requestedBy, inline: true },
 					)
 					.setTimestamp();
+
+				if (song.thumbnail) {
+					embed.setThumbnail(song.thumbnail);
+				}
 
 				await interaction.editReply({ embeds: [embed] });
 				await playSong(guildId, interaction.client);
@@ -128,6 +137,10 @@ export async function execute(
 						},
 					)
 					.setTimestamp();
+
+				if (song.thumbnail) {
+					embed.setThumbnail(song.thumbnail);
+				}
 
 				await interaction.editReply({ embeds: [embed] });
 				updatePresence(
