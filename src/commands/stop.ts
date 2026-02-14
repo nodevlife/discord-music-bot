@@ -19,7 +19,10 @@ export const data = [
 export async function execute(
 	interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-	const queue = queueManager.get(interaction.guildId!);
+	const guildId = interaction.guildId;
+	if (!guildId) return;
+
+	const queue = queueManager.get(guildId);
 	if (!queue) {
 		await interaction.reply({
 			content: "❌ 재생 중인 곡이 없어요!",
@@ -28,10 +31,10 @@ export async function execute(
 		return;
 	}
 
-	killActiveProcesses(interaction.guildId!);
+	killActiveProcesses(guildId);
 	queue.songs.length = 0;
-	queueManager.delete(interaction.guildId!);
-	updatePresence(interaction.client, null, 0, interaction.guildId!);
+	queueManager.delete(guildId);
+	updatePresence(interaction.client, null, 0, guildId);
 
 	const embed = new EmbedBuilder()
 		.setColor(0xed4245)

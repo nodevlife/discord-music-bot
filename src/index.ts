@@ -57,13 +57,13 @@ const client = new Client({
 });
 
 async function registerCommands(): Promise<void> {
-	const rest = new REST({ version: "10" }).setToken(DISCORD_TOKEN!);
+	const rest = new REST({ version: "10" }).setToken(DISCORD_TOKEN);
 	try {
 		console.log("슬래시 커맨드 등록 중...");
 		const allCommandData = commands.flatMap((c) =>
 			c.data.map((d) => d.toJSON()),
 		);
-		await rest.put(Routes.applicationCommands(DISCORD_CLIENT_ID!), {
+		await rest.put(Routes.applicationCommands(DISCORD_CLIENT_ID), {
 			body: allCommandData,
 		});
 		console.log(`슬래시 커맨드 ${allCommandData.length}개 등록 완료.`);
@@ -132,11 +132,12 @@ client.on("interactionCreate", async (interaction) => {
 					break;
 				}
 				case ButtonIds.SKIP: {
-					const skipped = queue.currentSong;
 					killActiveProcesses(guildId);
 					queue.player.stop();
 					const disabledRow = createPlayerButtons(false);
-					disabledRow.components.forEach((btn) => btn.setDisabled(true));
+					disabledRow.components.forEach((btn) => {
+						btn.setDisabled(true);
+					});
 					const embed = EmbedBuilder.from(interaction.message.embeds[0])
 						.setTitle("⏭️ 곡 스킵")
 						.setColor(0xfee75c)
@@ -155,7 +156,9 @@ client.on("interactionCreate", async (interaction) => {
 					queueManager.delete(guildId);
 					updatePresence(client, null, 0, guildId);
 					const disabledRow = createPlayerButtons(false);
-					disabledRow.components.forEach((btn) => btn.setDisabled(true));
+					disabledRow.components.forEach((btn) => {
+						btn.setDisabled(true);
+					});
 					const embed = EmbedBuilder.from(interaction.message.embeds[0])
 						.setTitle("⏹️ 재생 정지")
 						.setColor(0xed4245)

@@ -33,6 +33,10 @@ export const data = [
 export async function execute(
 	interaction: ChatInputCommandInteraction,
 ): Promise<void> {
+	const guildId = interaction.guildId;
+	const guild = interaction.guild;
+	if (!guildId || !guild) return;
+
 	const member = interaction.member as GuildMember;
 	const voiceChannel = member.voice.channel;
 
@@ -56,14 +60,14 @@ export async function execute(
 			requestedBy: interaction.user.tag,
 		};
 
-		let queue = queueManager.get(interaction.guildId!);
+		let queue = queueManager.get(guildId);
 
 		if (!queue) {
 			const player = createAudioPlayer();
 			const connection = joinVoiceChannel({
 				channelId: voiceChannel.id,
-				guildId: interaction.guildId!,
-				adapterCreator: interaction.guild!.voiceAdapterCreator,
+				guildId,
+				adapterCreator: guild.voiceAdapterCreator,
 			});
 			connection.subscribe(player);
 
@@ -76,7 +80,7 @@ export async function execute(
 				playing: false,
 				nowPlayingMessage: null,
 			};
-			queueManager.set(interaction.guildId!, queue);
+			queueManager.set(guildId, queue);
 			queue.songs.push(song);
 
 			const embed = new EmbedBuilder()
@@ -90,7 +94,7 @@ export async function execute(
 				.setTimestamp();
 
 			await interaction.editReply({ embeds: [embed] });
-			await playSong(interaction.guildId!, interaction.client);
+			await playSong(guildId, interaction.client);
 		} else {
 			queue.songs.push(song);
 
@@ -107,7 +111,7 @@ export async function execute(
 					.setTimestamp();
 
 				await interaction.editReply({ embeds: [embed] });
-				await playSong(interaction.guildId!, interaction.client);
+				await playSong(guildId, interaction.client);
 			} else {
 				// Currently playing — just add to queue
 				const embed = new EmbedBuilder()

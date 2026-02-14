@@ -6,7 +6,7 @@ const MAX_ACTIVITY_NAME = 128;
 
 function truncate(text: string, max: number): string {
 	if (text.length <= max) return text;
-	return text.slice(0, max - 3) + "...";
+	return `${text.slice(0, max - 3)}...`;
 }
 
 /** Find any guild that is currently playing a track (excluding the given guildId). */

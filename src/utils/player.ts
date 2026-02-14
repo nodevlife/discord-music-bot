@@ -1,11 +1,11 @@
+import { type ChildProcess, spawn } from "node:child_process";
+import type { Readable } from "node:stream";
 import {
 	AudioPlayerStatus,
 	createAudioResource,
 	StreamType,
 } from "@discordjs/voice";
-import { type ChildProcess, spawn } from "child_process";
 import { type Client, EmbedBuilder, TextChannel } from "discord.js";
-import type { Readable } from "stream";
 import { createPlayerButtons } from "./buttons";
 import { updatePresence } from "./presence";
 import { queueManager } from "./queue";
@@ -166,7 +166,8 @@ export async function playSong(guildId: string, client: Client): Promise<void> {
 		return;
 	}
 
-	const song = queue.songs.shift()!;
+	const song = queue.songs.shift();
+	if (!song) return;
 	queue.currentSong = song;
 	queue.playing = true;
 
@@ -192,7 +193,9 @@ export async function playSong(guildId: string, client: Client): Promise<void> {
 		// Disable buttons on previous now-playing message
 		if (queue.nowPlayingMessage) {
 			const disabledRow = createPlayerButtons(false);
-			disabledRow.components.forEach((btn) => btn.setDisabled(true));
+			disabledRow.components.forEach((btn) => {
+				btn.setDisabled(true);
+			});
 			await queue.nowPlayingMessage
 				.edit({ components: [disabledRow] })
 				.catch(() => {});

@@ -17,7 +17,10 @@ export const data = [
 export async function execute(
 	interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-	const queue = queueManager.get(interaction.guildId!);
+	const guildId = interaction.guildId;
+	if (!guildId) return;
+
+	const queue = queueManager.get(guildId);
 	if (!queue || !queue.currentSong) {
 		await interaction.reply({
 			content: "❌ 재생 중인 곡이 없어요!",
