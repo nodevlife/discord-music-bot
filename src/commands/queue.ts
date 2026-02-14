@@ -17,7 +17,10 @@ export const data = [
 export async function execute(
 	interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-	const queue = queueManager.get(interaction.guildId!);
+	const guildId = interaction.guildId;
+	if (!guildId) return;
+
+	const queue = queueManager.get(guildId);
 	if (!queue || (!queue.currentSong && queue.songs.length === 0)) {
 		await interaction.reply({
 			content: "📪 대기열이 비어있어요!",
