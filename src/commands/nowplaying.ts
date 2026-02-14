@@ -43,6 +43,10 @@ export async function execute(
 		.setURL(url)
 		.setTimestamp();
 
+	if (queue.currentSong.thumbnail) {
+		embed.setThumbnail(queue.currentSong.thumbnail);
+	}
+
 	if (nextSong) {
 		embed.addFields({
 			name: "⏭️ 다음 곡",

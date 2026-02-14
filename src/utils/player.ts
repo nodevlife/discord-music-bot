@@ -36,6 +36,7 @@ interface SongInfo {
 	title: string;
 	url: string;
 	duration: string;
+	thumbnail: string | null;
 }
 
 export async function getSongInfo(query: string): Promise<SongInfo> {
@@ -71,6 +72,7 @@ export async function getSongInfo(query: string): Promise<SongInfo> {
 					duration: `${Math.floor(dur / 60)}:${Math.floor(dur % 60)
 						.toString()
 						.padStart(2, "0")}`,
+					thumbnail: info.thumbnail ?? null,
 				});
 			} catch {
 				reject(new Error("yt-dlp 출력을 파싱할 수 없습니다"));
@@ -216,6 +218,10 @@ export async function playSong(guildId: string, client: Client): Promise<void> {
 				)
 				.setFooter({ text: `대기열에 ${queue.songs.length}곡 남음` })
 				.setTimestamp();
+
+			if (song.thumbnail) {
+				embed.setThumbnail(song.thumbnail);
+			}
 
 			const row = createPlayerButtons(false);
 			const msg = await channel
