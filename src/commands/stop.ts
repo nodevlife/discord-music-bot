@@ -3,6 +3,7 @@ import {
 	EmbedBuilder,
 	SlashCommandBuilder,
 } from "discord.js";
+import { ensureGuild } from "../utils/interaction";
 import { killActiveProcesses } from "../utils/player";
 import { updatePresence } from "../utils/presence";
 import { queueManager } from "../utils/queue";
@@ -19,10 +20,10 @@ export const data = [
 export async function execute(
 	interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-	const guildId = interaction.guildId;
-	if (!guildId) return;
+	const ctx = ensureGuild(interaction);
+	if (!ctx) return;
 
-	const queue = queueManager.get(guildId);
+	const queue = queueManager.get(ctx.guildId);
 	if (!queue) {
 		await interaction.reply({
 			content: "❌ 재생 중인 곡이 없어요!",
@@ -31,10 +32,10 @@ export async function execute(
 		return;
 	}
 
-	killActiveProcesses(guildId);
+	killActiveProcesses(ctx.guildId);
 	queue.songs.length = 0;
-	queueManager.delete(guildId);
-	updatePresence(interaction.client, null, 0, guildId);
+	queueManager.delete(ctx.guildId);
+	updatePresence(interaction.client, null, 0, ctx.guildId);
 
 	const embed = new EmbedBuilder()
 		.setColor(0xed4245)

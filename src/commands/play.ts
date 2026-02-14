@@ -1,10 +1,11 @@
 import { createAudioPlayer, joinVoiceChannel } from "@discordjs/voice";
 import {
 	type ChatInputCommandInteraction,
-	EmbedBuilder,
 	type GuildMember,
 	SlashCommandBuilder,
 } from "discord.js";
+import { createSongEmbed } from "../utils/embed";
+import { ensureGuild } from "../utils/interaction";
 import { getSongInfo, playSong } from "../utils/player";
 import { updatePresence } from "../utils/presence";
 import { queueManager } from "../utils/queue";
@@ -33,9 +34,11 @@ export const data = [
 export async function execute(
 	interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-	const guildId = interaction.guildId;
+	const ctx = ensureGuild(interaction);
+	if (!ctx) return;
+
 	const guild = interaction.guild;
-	if (!guildId || !guild) return;
+	if (!guild) return;
 
 	const member = interaction.member as GuildMember;
 	const voiceChannel = member.voice.channel;
@@ -61,13 +64,14 @@ export async function execute(
 			thumbnail: songInfo.thumbnail,
 		};
 
-		let queue = queueManager.get(guildId);
+		let queue = queueManager.get(ctx.guildId);
+		const shouldStartPlayback = !queue || !queue.playing;
 
 		if (!queue) {
 			const player = createAudioPlayer();
 			const connection = joinVoiceChannel({
 				channelId: voiceChannel.id,
-				guildId,
+				guildId: ctx.guildId,
 				adapterCreator: guild.voiceAdapterCreator,
 			});
 			connection.subscribe(player);
@@ -81,74 +85,24 @@ export async function execute(
 				playing: false,
 				nowPlayingMessage: null,
 			};
-			queueManager.set(guildId, queue);
-			queue.songs.push(song);
+			queueManager.set(ctx.guildId, queue);
+		}
 
-			const embed = new EmbedBuilder()
-				.setColor(0x5865f2)
-				.setTitle("🎵 재생 시작")
-				.setDescription(`[**${song.title}**](${song.url})`)
-				.addFields(
-					{ name: "⏱️ 길이", value: song.duration, inline: true },
-					{ name: "👤 신청자", value: song.requestedBy, inline: true },
-				)
-				.setTimestamp();
+		queue.songs.push(song);
 
-			if (song.thumbnail) {
-				embed.setThumbnail(song.thumbnail);
-			}
-
+		if (shouldStartPlayback) {
+			const embed = createSongEmbed({ title: "🎵 재생 시작", song });
 			await interaction.editReply({ embeds: [embed] });
-			await playSong(guildId, interaction.client);
+			await playSong(ctx.guildId, interaction.client);
 		} else {
-			queue.songs.push(song);
-
-			if (!queue.playing) {
-				// Queue exists but nothing playing — start playback
-				const embed = new EmbedBuilder()
-					.setColor(0x5865f2)
-					.setTitle("🎵 재생 시작")
-					.setDescription(`[**${song.title}**](${song.url})`)
-					.addFields(
-						{ name: "⏱️ 길이", value: song.duration, inline: true },
-						{ name: "👤 신청자", value: song.requestedBy, inline: true },
-					)
-					.setTimestamp();
-
-				if (song.thumbnail) {
-					embed.setThumbnail(song.thumbnail);
-				}
-
-				await interaction.editReply({ embeds: [embed] });
-				await playSong(guildId, interaction.client);
-			} else {
-				// Currently playing — just add to queue
-				const embed = new EmbedBuilder()
-					.setColor(0x57f287)
-					.setTitle("➕ 대기열에 추가됨")
-					.setDescription(`[**${song.title}**](${song.url})`)
-					.addFields(
-						{ name: "⏱️ 길이", value: song.duration, inline: true },
-						{ name: "👤 신청자", value: song.requestedBy, inline: true },
-						{
-							name: "📋 대기 순서",
-							value: `${queue.songs.length}번째`,
-							inline: true,
-						},
-					)
-					.setTimestamp();
-
-				if (song.thumbnail) {
-					embed.setThumbnail(song.thumbnail);
-				}
-
-				await interaction.editReply({ embeds: [embed] });
-				updatePresence(
-					interaction.client,
-					queue.currentSong,
-					queue.songs.length,
-				);
-			}
+			const embed = createSongEmbed({
+				title: "➕ 대기열에 추가됨",
+				song,
+				color: 0x57f287,
+				queuePosition: queue.songs.length,
+			});
+			await interaction.editReply({ embeds: [embed] });
+			updatePresence(interaction.client, queue.currentSong, queue.songs.length);
 		}
 	} catch (error) {
 		console.error("재생 오류:", error);
