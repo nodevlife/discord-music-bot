@@ -3,6 +3,7 @@ import {
 	EmbedBuilder,
 	SlashCommandBuilder,
 } from "discord.js";
+import { ensureGuild } from "../utils/interaction";
 import { killActiveProcesses } from "../utils/player";
 import { queueManager } from "../utils/queue";
 
@@ -18,10 +19,10 @@ export const data = [
 export async function execute(
 	interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-	const guildId = interaction.guildId;
-	if (!guildId) return;
+	const ctx = ensureGuild(interaction);
+	if (!ctx) return;
 
-	const queue = queueManager.get(guildId);
+	const queue = queueManager.get(ctx.guildId);
 	if (!queue || !queue.currentSong) {
 		await interaction.reply({
 			content: "❌ 재생 중인 곡이 없어요!",
@@ -31,7 +32,7 @@ export async function execute(
 	}
 
 	const skipped = queue.currentSong;
-	killActiveProcesses(guildId);
+	killActiveProcesses(ctx.guildId);
 	queue.player.stop();
 
 	const embed = new EmbedBuilder()

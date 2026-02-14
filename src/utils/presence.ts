@@ -45,7 +45,7 @@ export function updatePresence(
 
 	const suffix = queueLength > 0 ? ` 외 ${queueLength}곡 대기 중` : "";
 	const titleMax = MAX_ACTIVITY_NAME - suffix.length;
-	const name = truncate(track.title, Math.max(titleMax, 10)) + suffix;
+	const name = `${truncate(track.title, Math.max(titleMax, 10))}${suffix}`;
 
 	client.user?.setPresence({
 		status: "online",

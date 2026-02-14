@@ -5,8 +5,9 @@ import {
 	createAudioResource,
 	StreamType,
 } from "@discordjs/voice";
-import { type Client, EmbedBuilder, TextChannel } from "discord.js";
-import { createPlayerButtons } from "./buttons";
+import { type Client, TextChannel } from "discord.js";
+import { createDisabledButtons, createPlayerButtons } from "./buttons";
+import { createSongEmbed } from "./embed";
 import { updatePresence } from "./presence";
 import { queueManager } from "./queue";
 
@@ -194,12 +195,8 @@ export async function playSong(guildId: string, client: Client): Promise<void> {
 
 		// Disable buttons on previous now-playing message
 		if (queue.nowPlayingMessage) {
-			const disabledRow = createPlayerButtons(false);
-			disabledRow.components.forEach((btn) => {
-				btn.setDisabled(true);
-			});
 			await queue.nowPlayingMessage
-				.edit({ components: [disabledRow] })
+				.edit({ components: [createDisabledButtons()] })
 				.catch(() => {});
 			queue.nowPlayingMessage = null;
 		}
@@ -208,20 +205,11 @@ export async function playSong(guildId: string, client: Client): Promise<void> {
 			.fetch(queue.textChannelId)
 			.catch(() => null);
 		if (channel instanceof TextChannel) {
-			const embed = new EmbedBuilder()
-				.setColor(0x5865f2)
-				.setTitle("🎵 지금 재생 중")
-				.setDescription(`[**${song.title}**](${song.url})`)
-				.addFields(
-					{ name: "⏱️ 길이", value: song.duration, inline: true },
-					{ name: "👤 신청자", value: song.requestedBy, inline: true },
-				)
-				.setFooter({ text: `대기열에 ${queue.songs.length}곡 남음` })
-				.setTimestamp();
-
-			if (song.thumbnail) {
-				embed.setThumbnail(song.thumbnail);
-			}
+			const embed = createSongEmbed({
+				title: "🎵 지금 재생 중",
+				song,
+				footer: `대기열에 ${queue.songs.length}곡 남음`,
+			});
 
 			const row = createPlayerButtons(false);
 			const msg = await channel

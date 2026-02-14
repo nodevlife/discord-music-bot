@@ -7,7 +7,11 @@ import {
 	REST,
 	Routes,
 } from "discord.js";
-import { ButtonIds, createPlayerButtons } from "./utils/buttons";
+import {
+	ButtonIds,
+	createDisabledButtons,
+	createPlayerButtons,
+} from "./utils/buttons";
 import { killActiveProcesses } from "./utils/player";
 import { updatePresence, updatePresencePaused } from "./utils/presence";
 import { queueManager } from "./utils/queue";
@@ -134,10 +138,7 @@ client.on("interactionCreate", async (interaction) => {
 				case ButtonIds.SKIP: {
 					killActiveProcesses(guildId);
 					queue.player.stop();
-					const disabledRow = createPlayerButtons(false);
-					disabledRow.components.forEach((btn) => {
-						btn.setDisabled(true);
-					});
+					const disabledRow = createDisabledButtons();
 					const embed = EmbedBuilder.from(interaction.message.embeds[0])
 						.setTitle("⏭️ 곡 스킵")
 						.setColor(0xfee75c)
@@ -155,10 +156,7 @@ client.on("interactionCreate", async (interaction) => {
 					queue.songs.length = 0;
 					queueManager.delete(guildId);
 					updatePresence(client, null, 0, guildId);
-					const disabledRow = createPlayerButtons(false);
-					disabledRow.components.forEach((btn) => {
-						btn.setDisabled(true);
-					});
+					const disabledRow = createDisabledButtons();
 					const embed = EmbedBuilder.from(interaction.message.embeds[0])
 						.setTitle("⏹️ 재생 정지")
 						.setColor(0xed4245)

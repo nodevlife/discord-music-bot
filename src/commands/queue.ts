@@ -3,6 +3,7 @@ import {
 	EmbedBuilder,
 	SlashCommandBuilder,
 } from "discord.js";
+import { ensureGuild } from "../utils/interaction";
 import { queueManager } from "../utils/queue";
 
 export const data = [
@@ -17,10 +18,10 @@ export const data = [
 export async function execute(
 	interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-	const guildId = interaction.guildId;
-	if (!guildId) return;
+	const ctx = ensureGuild(interaction);
+	if (!ctx) return;
 
-	const queue = queueManager.get(guildId);
+	const queue = queueManager.get(ctx.guildId);
 	if (!queue || (!queue.currentSong && queue.songs.length === 0)) {
 		await interaction.reply({
 			content: "📪 대기열이 비어있어요!",

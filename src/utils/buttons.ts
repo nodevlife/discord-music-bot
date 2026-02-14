@@ -6,6 +6,14 @@ export const ButtonIds = {
 	STOP: "player_stop",
 } as const;
 
+export function createDisabledButtons(): ActionRowBuilder<ButtonBuilder> {
+	const row = createPlayerButtons(false);
+	for (const btn of row.components) {
+		btn.setDisabled(true);
+	}
+	return row;
+}
+
 export function createPlayerButtons(
 	paused: boolean,
 ): ActionRowBuilder<ButtonBuilder> {
